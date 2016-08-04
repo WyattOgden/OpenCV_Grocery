@@ -21,18 +21,3 @@ public:
 	ofstream& operator << (ofstream& outfile, image_Details& img_info);
 	void operator >> (ifstream& infile, image_Details& img_info);
 };
-
-
-ofstream& image_Details:: operator << (ofstream& outfile, image_Details& img_info){
-	outfile << filename << endl;
-	outfile << rowStart << endl;
-	outfile << rowEnd << endl;
-	outfile << similarity << endl;
-}
-
-void image_Details:: operator >>(ifstream& infile, image_Details& img_info){
-	infile >> filename;
-	infile >> rowStart;
-	infile >> rowEnd;
-	infile >> similarity;
-}
