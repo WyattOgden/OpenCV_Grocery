@@ -84,15 +84,9 @@ int main(int argc, char** argv)
 	//concatenate all descriptors into a SUPER Matrix of database descriptors
 	vconcat(descriptors, db_descriptors);
 
-	Mat indices(query_descriptor.rows, 2, CV_32S);
-	Mat distances(query_descriptor.rows, 2, CV_32F);
 
-	flann::Index index(db_descriptors, cv::flann::KDTreeIndexParams(4), cvflann::FLANN_DIST_EUCLIDEAN);
-	index.knnSearch(query_descriptor, indices, distances, 2, 24);
 
-	ofstream indicesOut;
 	ofstream rowsOut;
-	ofstream distanceOut;
 	ofstream imgInfoOut;
 
 	imgInfoOut.open("c:\\Users\\Wilhelm\\Desktop\\imginfo.txt");
@@ -101,43 +95,12 @@ int main(int argc, char** argv)
 		imgInfoOut << row_imgInfo[i];
 	}
 
-	indicesOut.open("c:\\Users\\Wilhelm\\Desktop\\IndicesOut.txt");
-	indicesOut << indices;
-	indicesOut.close();
-
 	rowsOut.open("c:\\Users\\Wilhelm\\Desktop\\rowsOut.txt");
 	for (int i = 0; i < size; i++) {
 		rowsOut << row_imgInfo[i].rowStart << "::" << row_imgInfo[i].rowEnd << endl;
 	}
 	rowsOut.close();
 
-	distanceOut.open("c:\\Users\\Wilhelm\\Desktop\\distanceOut.txt");
-	distanceOut << distances;
-	distanceOut.close();
-
-	for (int i = 0; i < indices.rows; i++) {
-		if (distances.at<float>(i, 0) < (0.6*distances.at<float>(i, 1))) {
-			for (int j = 0; j < size; j++) {
-				if (row_imgInfo[j].rowStart <= indices.at<int>(i, 0) && row_imgInfo[j].rowEnd >= indices.at<int>(i, 1)) {
-					row_imgInfo[j].similarity++;
-					break;
-				}
-			}
-		}
-	}
-
-	int max = row_imgInfo[0].similarity;
-	int indexMax = 0;
-	for (int i = 0; i < size; i++) {
-		cout << row_imgInfo[i].similarity << endl;
-	}
-	for (int i = 1; i < size; i++) {
-		if (max < row_imgInfo[i].similarity) {
-			max = row_imgInfo[i].similarity;
-			indexMax = i;
-		}
-	}
-	cout << "Image matched!" << filenames[indexMax] << endl;
 	string fileName = "c:\\Users\\Wilhelm\\Desktop\\descriptor_DB.xml";
 	FileStorage fs(fileName, FileStorage::WRITE);
 
