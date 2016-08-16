@@ -7,11 +7,9 @@ image_Details::image_Details()
 }
 
 ostream& operator << (ostream& outfile, image_Details& img_info) {
-	outfile << img_info.filename << endl;
 	outfile << img_info.rowStart << endl;
 	outfile << img_info.rowEnd << endl;
 	outfile << img_info.similarity << endl;
-	outfile << "END OF IMG." << endl;
 	return outfile;
 }
 
@@ -25,3 +23,4 @@ istream& operator >>(ifstream& infile, image_Details& img_info) {
 image_Details::~image_Details()
 {
 }
+
