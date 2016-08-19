@@ -9,6 +9,8 @@
 #include <opencv2\calib3d\calib3d.hpp>
 #include <opencv2\xfeatures2d.hpp>
 #include <opencv2\xfeatures2d\nonfree.hpp>
+#include <json\json.h>
+#include <json\writer.h>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -39,12 +41,37 @@ void imageResetSim(image_Details obj[], int size) {
 	}
 }
 
+void parsePriceName(string filename, string& price, string& name, int startIndex) {
+
+	char temp;
+	int i = startIndex;
+	//read in name until '_'
+	for (i; filename[i] != '_'; i++) {
+		temp = filename[i];
+		name += temp;
+	}
+	//read in price until '_'
+	i += 1;
+	for (i; filename[i] != '_'; i++) {
+		//if (filename[i] == '$') {
+		//	temp = '.';
+		//	price += temp;
+		//	continue;
+		//}
+
+		temp = filename[i];
+		price += temp;
+	}
+
+}
 
 
 int main(int argc, char** argv)
 {
 	//Read in the names of all the images within the directory
 	String directory = "c:\\Users\\Wilhelm\\Desktop\\grocery_items\\*.jpg";
+	string shit = "c:\\Users\\Wilhelm\\Desktop\\grocery_items\\";
+	int startingIndex = shit.size();
 	vector <String> filenames;
 
 	glob(directory, filenames, false);
@@ -79,17 +106,21 @@ int main(int argc, char** argv)
 	//Indexes all of the descriptors from the db_descriptors SUPER DATABASE for better searching
 	flann::Index index(db_descriptors, cv::flann::KDTreeIndexParams(4), cvflann::FLANN_DIST_EUCLIDEAN);
 	//LOOP TO DETECT ITEM FROM CAMERA FEED
-	double tick1;
-	double tick2;
-	double tickFrequency;
 	int frameCount = 0;
+
+	string prevItem = " ";
+	ofstream outFile;
+	outFile.open("c:\\Users\\Wilhelm\\Desktop\\outJSON.txt");
+	if (!outFile) {
+		cout << "Shit failed dawg." << endl;
+		return -1;
+	}
+
 	while (1) {
 
 		Mat frame;
 		//Capture the current fram into a Mat, basically treating it as an image.
 		capture >> frame;
-		//Creates window from the Mat frame
-		imshow("Keypoints", frame);
 
 		//calculate features.
 		if (frameCount % 2 == 0) {
@@ -97,7 +128,6 @@ int main(int argc, char** argv)
 			vector<KeyPoint> keypoints;
 			Mat descriptors;
 
-			tick1 = getTickCount();
 			//find keypoints and descriptors
 			detector->detectAndCompute(frame, Mat(), keypoints, descriptors);
 			//These matrices are passed to the flann.knnsearch as parameters.
@@ -106,17 +136,14 @@ int main(int argc, char** argv)
 
 			//Draws all the keypoints onto the frame  (for testing purposes to see how they are clustered)
 			drawKeypoints(frame, keypoints, frame, DrawMatchesFlags::DEFAULT);
-
+			imshow("Keypoints", frame);
 			//Ticks are used to calculate the time it takes for algorithims to finish
-			tick2 = getTickCount();
-			cout << (tick2 - tick1) / getTickFrequency() << ":: TIME TAKEN FOR DETECTING AND COMPUTING DESCRIPTORS..." << endl;
-			tick1 = getTickCount();
+
 			//the previous index we created from SUPER database of descriptors(Imported from offline) calls this function.
 			// Takes the descriptors of the query image as argument. Searches index and stores the matches in distances
 			// The indices of the distances within the Databse of descriptors are stored in indices.
-			index.knnSearch(descriptors, indices, distances, 2, 12);
-			tick2 = getTickCount();
-			cout << (tick2 - tick1) / getTickFrequency() << ":: TIME TAKEN FOR SEARCH" << endl;
+			index.knnSearch(descriptors, indices, distances, 2, 24);
+
 			//This for loop cycles through the entire distance/indices matrices 
 			//Compares the distance in the first column with the 2nd(multiplied by a constant).
 			//When a good distance is found enter 2nd for loop
@@ -128,7 +155,7 @@ int main(int argc, char** argv)
 			int* iP;
 			iP = indices.ptr<int>(0);
 			p = distances.ptr<float>(0);
-			tick1 = getTickCount();
+	
 			for (int i = 0; i < indices.rows*indices.cols; i++) {
 				if (p[i] < 0.8*p[i+1]) {
 					for (int j = 0; j < databaseSize; j++) {
@@ -140,27 +167,45 @@ int main(int argc, char** argv)
 				}
 				i++;
 			}
-			tick2 = getTickCount();
-			cout << (tick2 - tick1) / getTickFrequency() << ":: TIME TAKEN FOR SIMILARITY MATCHING" << endl;
+
 
 			//Object with the most similarity is the object that has been found!
 			int max = 0;
 			int indexMax;
-			tick1 = getTickCount();
+		
 			for (int i = 0; i < databaseSize; i++) {
 				if (max < img_info[i].similarity) {
 					max = img_info[i].similarity;
 					indexMax = i;
 				}
 			}
-			tick2 = getTickCount();
-			cout << (tick2 - tick1) / getTickFrequency() << " :: TIME TAKEN FOR FINDING MAX" << endl;
-			if (img_info[indexMax].similarity > 25) {
+
+			if (img_info[indexMax].similarity > 40) {
 				cout << "Image matched!" << filenames[indexMax] << endl;
+				//If looking at the same object, do nothing
+				string price;
+				string name;
+				parsePriceName(filenames[indexMax], price, name, startingIndex);
+				if (prevItem == name) {
+					imageResetSim(img_info, databaseSize);
+					continue;
+				}
+				//If different found object, return i
+				else {
+					Json::Value JSONevent;
+					JSONevent[name]["price"] = price;
+					string filenameOut = filenames[indexMax];
+					JSONevent[name]["filename"] = filenameOut;
+					cout << JSONevent << endl;
+					outFile << JSONevent << endl;
+				}
+				prevItem = name;
 			}
 			//Reset all of the objects similarity counts for the next iteration
 			imageResetSim(img_info, databaseSize);
-	
+			if (waitKey(30) >= 0) {
+				break;
+			}
 		}
 
 		if (waitKey(30) >= 0) {
