@@ -23,3 +23,4 @@ istream& operator >>(ifstream& infile, image_Details& img_info) {
 image_Details::~image_Details()
 {
 }
+

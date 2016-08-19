@@ -61,6 +61,7 @@ int main(int argc, char** argv)
 	//concatenate all descriptors into a SUPER Matrix of database descriptors
 	vconcat(descriptors, db_descriptors);
 
+
 	ofstream rowsOut;
 	ofstream imgInfoOut;
 
