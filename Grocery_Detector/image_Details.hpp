@@ -21,3 +21,4 @@ public:
 	friend istream& operator >> (ifstream& infile, image_Details& img_info);
 };
 
+
